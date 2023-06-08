@@ -220,6 +220,9 @@ Afrikaans
 	- Yiddish
 	- Yorubaa
 
+--------------- PERSONAL USE ------------------------------------------------------
+auto_subtitle_plus -o subtitled/ -s --language ja --device cuda --model medium --enhance-consistency path/to/video.mp4
+
 
 Further details on accuracy and models can be obtained here: https://github.com/openai/whisper#available-models-and-languages
 --------------------------------------------------------------------------

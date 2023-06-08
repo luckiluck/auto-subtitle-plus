@@ -3,6 +3,7 @@ import glob
 import psutil
 import ffmpeg
 import whisper
+import stable_whisper
 import argparse
 import warnings
 import tempfile
@@ -50,7 +51,17 @@ def main():
     device: str = args.pop("device")
     extract_wokers: str = args.pop("extract_workers")
     enhace_consistency: bool = args.pop("enhance_consistency")
+    language: str = args.pop("language")
     os.makedirs(output_dir, exist_ok=True)
+
+    if language is not None:
+        if language not in sorted(whisper.tokenizer.LANGUAGES.keys()) + sorted([k.title() for k in whisper.tokenizer.TO_LANGUAGE_CODE.keys()]):
+            raise Exception(
+                f'whisper: error: argument --language: invalid choice: {language} (choose from {list(LANGUAGES.keys())}) {list(LANGUAGES.values())}')
+        else:
+            warnings.warn(
+                f"You have forced the use of the {language} language.")
+            args["language"] = language
 
     # Default output_srt to True if output_video is False
     if not output_video and not output_srt:
@@ -58,8 +69,17 @@ def main():
 
     # Process wildcards
     paths = []
+
+    #for path in args['paths']:
+    #    paths += list(glob.glob(path))
+
+    # Support for directory path
     for path in args['paths']:
-        paths += list(glob.glob(path))
+        if os.path.isdir(path):
+            paths += os.listdir(path)
+        else:
+            paths.append(path)
+
     n = len(paths)
     if n == 0:
         print('Video file not found.')
@@ -76,7 +96,7 @@ def main():
             "forcing English detection")
         args["language"] = "en"
 
-    model = whisper.load_model(model_name, device=device)
+    model = stable_whisper.load_model(model_name, device=device)
 
     # Extract audio from video. Skip if it is already an audio file
     audios = get_audio(paths, output_audio, output_dir, extract_wokers)
@@ -84,7 +104,7 @@ def main():
     # Generate subtitles with whisper
     subtitles = get_subtitles(
         audios, output_srt, output_dir, 
-        lambda audio_path: model.transcribe(audio_path, condition_on_previous_text=enhace_consistency, **args)
+        lambda audio_path: model.transcribe(audio_path, condition_on_previous_text=enhace_consistency, suppress_silence=True, mel_first=True, **args)
     )
 
     if not output_video:
@@ -151,7 +171,8 @@ def get_subtitles(audio_paths: list, output_srt: bool, output_dir: str, transcri
         warnings.filterwarnings("default")
 
         with open(srt_path, "w", encoding="utf-8") as srt:
-            write_srt(result["segments"], file=srt)
+            #write_srt(result["segments"], file=srt)
+            result.to_srt_vtt(srt_path)
 
         subtitles_path[path] = srt_path
 
