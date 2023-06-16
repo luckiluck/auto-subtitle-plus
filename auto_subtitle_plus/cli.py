@@ -70,14 +70,15 @@ def main():
     # Process wildcards
     paths = []
 
-    #for path in args['paths']:
-    #    paths += list(glob.glob(path))
-
     # Support for directory path
+    video_extensions = ['.mp4', '.mkv']  # Add more extensions if needed
+
     for path in args['paths']:
         if os.path.isdir(path):
-            paths += os.listdir(path)
-        else:
+            for file in os.listdir(path):
+                if any(file.endswith(ext) for ext in video_extensions):
+                    paths.append(os.path.join(path, file))
+        elif any(path.endswith(ext) for ext in video_extensions):
             paths.append(path)
 
     n = len(paths)
